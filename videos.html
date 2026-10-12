@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WINNER! WINNER! — Mascot videos</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; font-family: -apple-system, "Segoe UI", sans-serif; color: #222; }
+  header { text-align: center; padding: 28px 16px 8px; }
+  header h1 { margin: 0; font-size: 40px; color: #b22222; letter-spacing: 1px; }
+  header p { margin: 8px 0 0; font-size: 20px; color: #555; }
+  main { max-width: 520px; margin: 0 auto; padding: 16px 16px 48px; }
+  figure { margin: 0 0 32px; }
+  video { display: block; width: 100%; border-radius: 12px; background: #fff; }
+  figcaption { text-align: center; font-size: 20px; color: #555; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>WINNER! WINNER!</h1>
+  <p>Tap any video to replay it.</p>
+</header>
+<main>
+  <figure>
+    <video src="guide-crash.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <figcaption>Crash landing</figcaption>
+  </figure>
+  <figure>
+    <video src="guide-wake-up.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <figcaption>Wake up</figcaption>
+  </figure>
+  <figure>
+    <video src="guide-drink-break.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <figcaption>Drink break</figcaption>
+  </figure>
+  <figure>
+    <video src="guide-floor-drop.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <figcaption>Floor drop</figcaption>
+  </figure>
+  <figure>
+    <video src="guide-writing.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <figcaption>Writing</figcaption>
+  </figure>
+  <figure>
+    <video src="guide-celebrate.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <figcaption>Celebrate</figcaption>
+  </figure>
+</main>
+<script>
+  document.querySelectorAll("video").forEach(function (v) {
+    v.addEventListener("click", function () { v.currentTime = 0; v.play(); });
+    var p = v.play();
+    if (p && p.catch) { p.catch(function () {}); }
+  });
+</script>
+</body>
+</html>
