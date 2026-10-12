@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet" />
+  <title>WINNER! WINNER!</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --paper: #ffffff;
+      --surface: #ffffff;
+      --surface-2: #eaf1f3;
+      --ink: #102a33;
+      --muted: #405b64;
+      --line: #b9cbd1;
+      --blue: #075d79;
+      --gold: #d69a16;
+      --focus: #ffb000;
+      --board: #a87845;
+      --board-edge: #72502f;
+      --sheet: #fffdf4;
+      --sheet-ink: #272018;
+      --clip: #aeb6b7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #ffffff;
+        --surface: #ffffff;
+        --surface-2: #eaf1f3;
+        --ink: #102a33;
+        --muted: #405b64;
+        --line: #b9cbd1;
+        --blue: #075d79;
+        --gold: #d69a16;
+        --focus: #ffb000;
+        --board: #a87845;
+        --board-edge: #72502f;
+        --sheet: #fffdf4;
+        --sheet-ink: #272018;
+        --clip: #aeb6b7;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
+      font: 19px/1.42 "Nunito", sans-serif;
+      font-weight: 500;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    a { color: var(--blue); text-underline-offset: 4px; }
+    :focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+    .shell { width: min(100% - 28px, 680px); margin: 0 auto; padding: 18px 0 54px; }
+    .intro { padding: 8px 0 16px; border-bottom: 2px solid var(--ink); }
+    h1, h2, h3 { font-family: "Nunito", sans-serif; line-height: 1.08; margin: 0; letter-spacing: -.02em; font-weight: 800; }
+    h1 { font-size: clamp(2.2rem, 12vw, 3.5rem); }
+    h2 { font-size: clamp(1.65rem, 8vw, 2.35rem); }
+    h3 { font-size: 1.45rem; }
+    .reviewed { margin-top: 7px; color: var(--muted); font-size: 19px; }
+    .progress-wrap { display: none; align-items: center; gap: 12px; padding: 16px 0 0; }
+    .progress-wrap.on { display: flex; }
+    .progress { height: 10px; background: var(--line); flex: 1; overflow: hidden; border-radius: 99px; }
+    .progress > span { display: block; height: 100%; width: 0; background: var(--gold); transition: width .2s ease; }
+    .progress-label { min-width: 72px; text-align: right; font-weight: 700; font-size: 19px; }
+    .panel { display: none; padding-top: 24px; }
+    .panel.active { display: block; }
+    .question-panel { padding-top: 18px; }
+    .interview-top {
+      display: grid;
+      grid-template-columns: 142px minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+      min-height: 218px;
+      margin-bottom: 8px;
+      transition: opacity .28s ease;
+    }
+    .interview-guide-wrap {
+      align-self: end;
+      height: 208px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .interview-guide {
+      display: block;
+      max-width: 100%;
+      max-height: 208px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      background: #fff;
+      transform-origin: 50% 92%;
+    }
+    .interview-guide.writing { filter: none; }
+    body.transitioning .panel.active .interview-top { opacity: 0; }
+    body.recording .panel.active input,
+    body.recording .panel.active button,
+    body.transitioning .panel.active input,
+    body.transitioning .panel.active button { pointer-events: none; }
+    .speech-bubble {
+      position: relative;
+      background: var(--surface);
+      border: 3px solid var(--ink);
+      border-radius: 18px;
+      padding: 18px 17px;
+      box-shadow: 0 5px 0 color-mix(in srgb, var(--ink) 14%, transparent);
+      transition: transform .16s ease;
+    }
+    .speech-bubble::before {
+      content: "";
+      position: absolute;
+      left: -18px;
+      top: 52%;
+      width: 29px;
+      height: 29px;
+      background: var(--surface);
+      border-left: 3px solid var(--ink);
+      border-bottom: 3px solid var(--ink);
+      transform: translateY(-50%) rotate(45deg);
+    }
+    .speech-bubble h2 { position: relative; font-family: "Caveat", cursive; font-size: clamp(2rem, 8vw, 3rem); line-height: .98; letter-spacing: 0; }
+    @keyframes interviewIdle {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      45% { transform: translateY(-3px) rotate(-.45deg); }
+      55% { transform: translateY(-4px) rotate(.35deg); }
+    }
+    @keyframes penPull {
+      0% { opacity: .35; transform: translateY(4px) rotate(-1deg); }
+      100% { opacity: 1; transform: translateY(0) rotate(0); }
+    }
+    @keyframes writingJot {
+      from { transform: rotate(-.7deg) translateY(0); }
+      to { transform: rotate(.7deg) translateY(2px); }
+    }
+    .welcome-grid { display: grid; grid-template-columns: minmax(0,1fr) 156px; gap: 18px; align-items: end; }
+    .guide { margin: 0; align-self: end; }
+    .guide img, .guide video { display: block; width: 100%; height: auto; background: #fff; }
+    .guide figcaption { text-align: center; font-weight: 700; margin-top: -4px; }
+    .welcome-guide { position: relative; min-height: 238px; overflow: visible; }
+    .welcome-guide::before {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      left: 18%;
+      top: -34px;
+      width: 8px;
+      height: 8px;
+      opacity: 0;
+      border-radius: 45% 55% 48% 52%;
+      background: #b39d7f;
+      box-shadow: 20px 12px 0 -1px #88745c, 44px 2px 0 -2px #c2ad90, 66px 20px 0 -1px #78664f, 92px 8px 0 -2px #ad9778;
+    }
+    .welcome-guide.crumbling::before { animation: roofCrumble 1.65s ease-in both; }
+    .welcome-guide video { position: absolute; left: 0; bottom: 26px; opacity: 1; background: #fff; }
+    .welcome-guide.arriving video { opacity: 1; }
+    .welcome-guide.impact::after { content: ""; position: absolute; left: 50%; bottom: 22px; width: 120px; height: 28px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(154,133,104,.55) 0 18%, rgba(154,133,104,.25) 40%, transparent 70%); animation: dustImpact 1.2s ease-out both; }
+    .welcome-guide.brushing video, .welcome-guide.waving video { opacity: 1; }
+    .welcome-guide.leaving video { opacity: 0; transition: opacity .25s ease; }
+    .guide.results-guide { width: 88px; }
+    .guide.results-guide figcaption { display: none; }
+    .results-layout { position: relative; }
+    .results-pointer { margin: 10px 0 -25px auto; width: 86px; }
+    .results-pointer img { display: block; width: 100%; height: auto; }
+    .results-video { width: 126px; max-width: 100%; background: #fff; object-fit: contain; }
+    .video-transition {
+      position: fixed;
+      z-index: 40;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      pointer-events: all;
+      background: #fff;
+    }
+    .video-transition.active { display: flex; }
+    .video-transition video { width: min(100vw, 620px); height: 100vh; object-fit: contain; background: #fff; }
+    .video-transition.floor-follow { animation: cameraFollowDown 10s linear both; }
+    @keyframes cameraFollowDown { 0%, 70% { transform: translateY(0); } 100% { transform: translateY(-100vh); } }
+    .drink-break-label { position: fixed; z-index: 41; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); color: #102a33; font-family: "Caveat", cursive; font-size: 2rem; font-weight: 700; pointer-events: none; white-space: nowrap; }
+    @keyframes roofCrumble {
+      0% { opacity: 0; transform: translateY(-16px) rotate(0); }
+      16% { opacity: .9; }
+      68% { opacity: 1; transform: translateY(74px) rotate(150deg); }
+      100% { opacity: 0; transform: translateY(142px) rotate(260deg); }
+    }
+    @keyframes guideDrop { 0% { opacity: 0; transform: translateY(-120vh) rotate(-11deg); } 24% { opacity: 1; transform: translateY(-88vh) rotate(7deg); } 56% { transform: translateY(-42vh) rotate(-5deg); } 78% { opacity: 1; transform: translateY(16px) rotate(2deg); } 90% { transform: translateY(-11px) rotate(-1deg); } 100% { opacity: 1; transform: translateY(0) rotate(0); } }
+    @keyframes dustImpact { 0% { opacity: 0; transform: translateX(-50%) scale(.25); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) scale(1.8); } }
+    @keyframes brushShake { 0%,100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-5px) rotate(-2deg); } 75% { transform: translateX(5px) rotate(2deg); } }
+    @keyframes guideHopOut { 0% { transform: translateY(0); } 30% { transform: translateY(12px) scaleY(.94); } 100% { transform: translateY(-110vh) scaleY(1.04); opacity: 0; } }
+    .guide-transition { position: fixed; z-index: 30; right: 10px; bottom: 4px; width: 92px; height: 170px; pointer-events: none; opacity: 0; }
+    .guide-transition img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .guide-transition::after { content: ""; position: absolute; left: 50%; bottom: 2px; width: 88px; height: 20px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(154,133,104,.52), transparent 68%); opacity: 0; }
+    .guide-transition.exit-roof { opacity: 1; animation: guideBlastOut .78s ease-in forwards; }
+    .guide-transition.exit-floor { opacity: 1; animation: guideDropOut .78s ease-in forwards; }
+    .guide-transition.exit-roof::after, .guide-transition.exit-floor::after { animation: poof .8s ease-out both; }
+    .guide-transition.enter-roof { animation: guideQuickDrop 1.3s cubic-bezier(.16,.64,.22,1) forwards; }
+    .guide-transition.enter-floor { animation: guideFloorBurst 1.15s cubic-bezier(.15,.68,.22,1) forwards; }
+    .guide-transition.enter-roof::after, .guide-transition.enter-floor::after { animation: poof 1s .7s ease-out both; }
+    .guide-transition.floor-crumble::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -4px;
+      width: 116px;
+      height: 26px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: #10191d;
+      box-shadow: 0 0 0 7px color-mix(in srgb, #806a50 56%, transparent);
+      animation: floorGiveWay 1s ease-out both;
+    }
+    .guide-transition.suspended { opacity: 1; width: 118px; height: 204px; animation: suspendedWobble 1.8s ease-in-out both; }
+    .guide-transition.drop-follow { opacity: 1; animation: dropWithCamera 1.35s cubic-bezier(.55,.02,.8,.35) forwards; }
+    .guide-transition.brush { opacity: 1; animation: brushShake .52s ease-in-out 3; }
+    .guide-transition.wave { opacity: 1; }
+    @keyframes floorGiveWay { 0% { opacity: 0; transform: translateX(-50%) scale(.2); } 38% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: .9; transform: translateX(-50%) scale(1.15); } }
+    @keyframes suspendedWobble { 0% { transform: translateY(5px) rotate(-2deg); } 45% { transform: translateY(-4px) rotate(1deg); } 100% { transform: translateY(0) rotate(0); } }
+    @keyframes dropWithCamera { 0% { transform: translateY(0); } 62% { transform: translateY(48vh) rotate(2deg); opacity: 1; } 100% { transform: translateY(115vh) rotate(-4deg); opacity: 0; } }
+    @keyframes guideBlastOut { 0% { opacity: 1; transform: translateY(0); } 25% { transform: translateY(8px) scaleY(.94); } 100% { opacity: 1; transform: translateY(-115vh) scaleY(1.04); } }
+    @keyframes guideDropOut { 0% { opacity: 1; transform: translateY(0); } 30% { transform: translateY(-8px); } 100% { opacity: 1; transform: translateY(115vh); } }
+    @keyframes guideQuickDrop { 0% { opacity: 1; transform: translateY(-115vh); } 78% { opacity: 1; transform: translateY(7px); } 100% { opacity: 1; transform: translateY(0); } }
+    @keyframes guideFloorBurst { 0% { opacity: 1; transform: translateY(115vh); } 78% { opacity: 1; transform: translateY(-7px); } 100% { opacity: 1; transform: translateY(0); } }
+    @keyframes poof { 0% { opacity: 0; transform: translateX(-50%) scale(.2); } 45% { opacity: .9; } 100% { opacity: 0; transform: translateX(-50%) scale(1.55); } }
+    .lead { color: var(--muted); font-size: 19px; margin: 10px 0 18px; }
+    .notice { background: var(--surface-2); padding: 13px 14px; margin: 16px 0; border-radius: 9px; }
+    .actions { display: flex; gap: 10px; margin-top: 22px; }
+    .btn { border: 0; border-radius: 10px; padding: 13px 18px; min-height: 58px; font-weight: 700; cursor: pointer; background: var(--blue); color: #fff; flex: 1; }
+    .sound-toggle { min-height: 44px; padding: 8px 12px; margin-top: 12px; border: 2px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink); font-weight: 800; cursor: pointer; }
+    .sound-toggle[aria-pressed="true"] { border-color: var(--blue); color: var(--blue); }
+    .btn.secondary { background: var(--surface-2); color: var(--ink); border: 2px solid var(--line); }
+    .btn.ghost { background: transparent; color: var(--blue); border: 2px solid var(--blue); }
+    .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+    .choice { position: relative; }
+    .choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .choice label {
+      min-height: 64px; display: flex; align-items: center; padding: 12px 13px;
+      background: var(--surface); border: 2px solid var(--line); border-radius: 10px;
+      cursor: pointer; font-weight: 700; line-height: 1.18;
+    }
+    .choice input:checked + label { background: color-mix(in srgb, var(--blue) 14%, var(--surface)); border-color: var(--blue); box-shadow: inset 0 0 0 2px var(--blue); }
+    .choice input:focus-visible + label { outline: 4px solid var(--focus); outline-offset: 3px; }
+    .field { display: grid; gap: 9px; margin-top: 22px; }
+    .field label { font-weight: 700; }
+    .field input {
+      width: 100%; min-height: 64px; border: 2px solid var(--line); border-radius: 10px;
+      padding: 12px 14px; background: var(--surface); color: var(--ink); font-size: 22px;
+    }
+    .segmented { display: grid; gap: 10px; margin-top: 18px; }
+    #resultsPanel {
+      position: relative;
+      margin-top: 44px;
+      padding: 66px 24px 28px;
+      color: var(--sheet-ink);
+      background: var(--board);
+      border: 4px solid var(--board-edge);
+      border-radius: 18px;
+      box-shadow: 0 9px 0 color-mix(in srgb, var(--board-edge) 70%, transparent), 0 18px 36px rgba(16,42,51,.2);
+    }
+    #resultsPanel::before {
+      content: "";
+      position: absolute;
+      z-index: 3;
+      top: -24px;
+      left: 50%;
+      width: 148px;
+      height: 58px;
+      transform: translateX(-50%);
+      border: 4px solid #70787a;
+      border-radius: 15px 15px 9px 9px;
+      background: linear-gradient(#d9dede, var(--clip));
+      box-shadow: inset 0 8px 0 rgba(255,255,255,.35), 0 5px 6px rgba(40,31,21,.3);
+    }
+    #resultsPanel::after {
+      content: "";
+      position: absolute;
+      z-index: 4;
+      top: -11px;
+      left: 50%;
+      width: 58px;
+      height: 16px;
+      transform: translateX(-50%);
+      border: 3px solid #737b7c;
+      border-radius: 10px;
+      background: #eef1f1;
+    }
+    #resultsPanel > * { position: relative; z-index: 1; }
+    #resultsPanel .summary-band,
+    #resultsPanel .keep-results,
+    #resultsPanel .copy-status,
+    #resultsPanel .results-layout,
+    #resultsPanel > .actions {
+      background: var(--sheet);
+    }
+    .summary-band { display: grid; grid-template-columns: 1fr 126px; gap: 14px; align-items: end; padding: 22px 18px 16px; border-radius: 10px 10px 0 0; }
+    .summary-band h2 { font-family: "Caveat", cursive; font-size: clamp(2.2rem, 8vw, 3.2rem); letter-spacing: 0; }
+    .result-count { font-weight: 800; color: #59452f; margin-top: 3px; }
+    .filters, #endedWarnings { display: none; }
+    .keep-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 0; padding: 14px 18px 3px; }
+    .keep-results .btn { min-height: 54px; padding: 10px 8px; }
+    .copy-status { min-height: 31px; margin: 0; padding: 7px 18px 0; color: #59452f; font-weight: 800; text-align: center; }
+    .results-layout { padding: 0 18px; }
+    .program-list { display: grid; }
+    .program { padding: 22px 0; border-bottom: 2px solid #d7ccb7; }
+    .program h3 { margin-bottom: 8px; font-family: "Caveat", cursive; font-size: clamp(1.8rem, 7vw, 2.45rem); line-height: 1; letter-spacing: 0; color: #392c20; }
+    .program .benefit { margin: 0 0 14px; color: var(--sheet-ink); }
+    .program-links { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .program-links a, .phone { min-height: 52px; display: inline-flex; align-items: center; padding: 10px 13px; border-radius: 9px; font-weight: 800; }
+    .program-links a { color: #174f63; border: 2px solid #174f63; text-decoration: none; }
+    .phone { background: #e7dfce; color: var(--sheet-ink); }
+    #resultsPanel > .actions { margin: 0; padding: 22px 18px; border-radius: 0 0 10px 10px; }
+    .empty { padding: 30px 0; color: var(--muted); }
+    .hidden { display: none !important; }
+    @media (max-width: 480px) {
+      .shell { width: min(100% - 22px, 680px); }
+      .welcome-grid { grid-template-columns: minmax(0,1fr) 118px; gap: 8px; }
+      .choice-grid { grid-template-columns: 1fr; }
+      .actions { flex-direction: row; }
+      .welcome-grid .actions { flex-direction: column; }
+      .answering .intro { display: none; }
+      .question-panel { padding-top: 12px; }
+      .interview-top { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; min-height: 178px; margin-bottom: 6px; }
+      .interview-guide-wrap { height: 174px; }
+      .interview-guide { max-height: 174px; }
+      .speech-bubble { border-width: 2px; border-radius: 15px; padding: 14px 13px; box-shadow: 0 4px 0 color-mix(in srgb, var(--ink) 14%, transparent); }
+      .speech-bubble::before { left: -14px; width: 22px; height: 22px; border-width: 0 0 2px 2px; }
+      .speech-bubble h2 { font-size: clamp(1.8rem, 8vw, 2.35rem); }
+      #resultsPanel { margin-top: 36px; padding: 58px 10px 16px; border-width: 3px; border-radius: 14px; }
+      #resultsPanel::before { width: 124px; height: 52px; }
+      .summary-band { grid-template-columns: 1fr 96px; padding: 18px 14px 13px; }
+      .guide.results-guide { width: 96px; }
+      .results-video { width: 96px; }
+      .video-transition video { width: 100vw; height: 100dvh; }
+      .program-links { display: grid; }
+      .program-links a, .phone { width: 100%; justify-content: center; }
+      .keep-results { grid-template-columns: 1fr; padding: 12px 14px 3px; }
+      .keep-results .btn { min-height: 58px; }
+      .copy-status { padding-left: 14px; padding-right: 14px; }
+      .results-layout { padding: 0 14px; }
+      #resultsPanel > .actions { padding: 18px 14px; }
+    }
+    @media (max-width: 340px) {
+      body { font-size: 19px; }
+      .welcome-grid { grid-template-columns: 1fr; }
+      .welcome-grid .guide { width: 104px; justify-self: center; }
+      .interview-top { grid-template-columns: 88px minmax(0, 1fr); gap: 8px; min-height: 154px; }
+      .interview-guide-wrap { height: 150px; }
+      .interview-guide { max-height: 150px; }
+      .speech-bubble { padding: 12px 11px; }
+      .speech-bubble h2 { font-size: 1.65rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .progress > span { transition: none; }
+      .welcome-guide video, .video-transition, .interview-guide { animation: none !important; }
+      .welcome-guide video { opacity: 1; }
+      .video-transition { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="intro">
+      <h1>WINNER! WINNER!</h1>
+      <div class="reviewed">Indiana benefits finder</div>
+      <button class="sound-toggle" type="button" id="soundToggle" aria-pressed="true">Sound on</button>
+    </section>
+
+    <div class="progress-wrap" id="progressWrap" aria-label="Questionnaire progress">
+      <div class="progress"><span id="progressBar"></span></div>
+      <div class="progress-label" id="progressLabel">1 of 13</div>
+    </div>
+
+    <section class="panel active" data-panel="welcome">
+      <div class="welcome-grid">
+        <div>
+          <h2>Find help with your bills</h2>
+          <p class="lead">Answer 13 quick questions.</p>
+          <div class="notice">Need help now? Call <a href="tel:211">211</a>.</div>
+          <div class="actions">
+            <button class="btn" type="button" data-go="1">Start</button>
+            <button class="btn secondary" type="button" id="browseAll">See all programs</button>
+          </div>
+        </div>
+        <figure class="guide welcome-guide" id="welcomeGuide"><video id="welcomeGuideVideo" src="videos/guide-crash.mp4" aria-label="Guide falling through the roof" autoplay muted playsinline preload="auto" poster="images/guide-falling.png"></video></figure>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="1">
+      <h2>Which bills need help?</h2>
+      <div class="choice-grid" id="needsGrid">
+        <div class="choice"><input id="n-food" type="checkbox" data-group="needs" value="food"><label for="n-food">Food</label></div>
+        <div class="choice"><input id="n-home" type="checkbox" data-group="needs" value="housing"><label for="n-home">Housing</label></div>
+        <div class="choice"><input id="n-energy" type="checkbox" data-group="needs" value="energy"><label for="n-energy">Electric & gas</label></div>
+        <div class="choice"><input id="n-water" type="checkbox" data-group="needs" value="water"><label for="n-water">Water & sewer</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="welcome">Back</button><button class="btn" type="button" data-go="1a">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="1a">
+      <h2>Which care bills need help?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="n-connect" type="checkbox" data-group="needs" value="connect"><label for="n-connect">Phone & internet</label></div>
+        <div class="choice"><input id="n-health" type="checkbox" data-group="needs" value="health"><label for="n-health">Health care</label></div>
+        <div class="choice"><input id="n-rx" type="checkbox" data-group="needs" value="rx"><label for="n-rx">Medicine & dental</label></div>
+        <div class="choice"><input id="n-child" type="checkbox" data-group="needs" value="childcare"><label for="n-child">Child care</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="1">Back</button><button class="btn" type="button" data-go="1b">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="1b">
+      <h2>Any other bills?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="n-ride" type="checkbox" data-group="needs" value="transport"><label for="n-ride">Transportation</label></div>
+        <div class="choice"><input id="n-cash" type="checkbox" data-group="needs" value="income"><label for="n-cash">Cash & work</label></div>
+        <div class="choice"><input id="n-repair" type="checkbox" data-group="needs" value="repair"><label for="n-repair">Home repairs</label></div>
+        <div class="choice"><input id="n-care" type="checkbox" data-group="needs" value="care"><label for="n-care">Care at home</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="1a">Back</button><button class="btn" type="button" data-go="1c">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="1c">
+      <h2>Any legal or emergency costs?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="n-legal" type="checkbox" data-group="needs" value="legal"><label for="n-legal">Legal & tax</label></div>
+        <div class="choice"><input id="n-funeral" type="checkbox" data-group="needs" value="funeral"><label for="n-funeral">Funeral costs</label></div>
+        <div class="choice"><input id="n-disaster" type="checkbox" data-group="needs" value="disaster"><label for="n-disaster">Disaster loss</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="1b">Back</button><button class="btn" type="button" data-go="2">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="2">
+      <h2>How many people live with you?</h2>
+      <div class="field"><label for="household">Household size</label><input id="household" type="number" inputmode="numeric" min="1" max="20" value="1"></div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="1c">Back</button><button class="btn" type="button" data-go="3">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="3">
+      <h2>About how much income each year?</h2>
+      <div class="field"><label for="income">Before taxes</label><input id="income" type="number" inputmode="decimal" min="0" step="100"></div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="2">Back</button><button class="btn" type="button" data-go="4">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="4">
+      <h2>Any adults age 19 or older?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="p-19" type="checkbox" data-group="profile" value="adult"><label for="p-19">Age 19–59</label></div>
+        <div class="choice"><input id="p-60" type="checkbox" data-group="profile" value="age60"><label for="p-60">Age 60–64</label></div>
+        <div class="choice"><input id="p-65" type="checkbox" data-group="profile" value="age65"><label for="p-65">Age 65+</label></div>
+        <div class="choice"><input id="p-dis" type="checkbox" data-group="profile" value="disabled"><label for="p-dis">Disability or blindness</label></div>
+        <div class="choice"><input id="p-caregiver" type="checkbox" data-group="profile" value="caregiver"><label for="p-caregiver">Family caregiver</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="3">Back</button><button class="btn" type="button" data-go="4b">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="4b">
+      <h2>Any children or special situations?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="p-u5" type="checkbox" data-group="profile" value="under5"><label for="p-u5">Child under 5</label></div>
+        <div class="choice"><input id="p-four" type="checkbox" data-group="profile" value="age4"><label for="p-four">Child age 4</label></div>
+        <div class="choice"><input id="p-school" type="checkbox" data-group="profile" value="schoolchild"><label for="p-school">K–12 student</label></div>
+        <div class="choice"><input id="p-preg" type="checkbox" data-group="profile" value="pregnant"><label for="p-preg">Pregnant or new parent</label></div>
+        <div class="choice"><input id="p-vet" type="checkbox" data-group="profile" value="veteran"><label for="p-vet">Veteran family</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="4">Back</button><button class="btn" type="button" data-go="5">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="5">
+      <h2>Which benefits do you get?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="b-snap" type="checkbox" data-group="benefits" value="snap"><label for="b-snap">SNAP</label></div>
+        <div class="choice"><input id="b-medicaid" type="checkbox" data-group="benefits" value="medicaid"><label for="b-medicaid">Medicaid or HIP</label></div>
+        <div class="choice"><input id="b-medicare" type="checkbox" data-group="benefits" value="medicare"><label for="b-medicare">Medicare</label></div>
+        <div class="choice"><input id="b-ssi" type="checkbox" data-group="benefits" value="ssi"><label for="b-ssi">SSI</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="4b">Back</button><button class="btn" type="button" data-go="5b">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="5b">
+      <h2>Any other benefits?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="b-tanf" type="checkbox" data-group="benefits" value="tanf"><label for="b-tanf">TANF</label></div>
+        <div class="choice"><input id="b-housing" type="checkbox" data-group="benefits" value="publichousing"><label for="b-housing">Housing help</label></div>
+        <div class="choice"><input id="b-eap" type="checkbox" data-group="benefits" value="eap"><label for="b-eap">Energy help</label></div>
+        <div class="choice"><input id="b-none" type="checkbox" data-group="benefits" value="none"><label for="b-none">None</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="5">Back</button><button class="btn" type="button" data-go="6">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="6">
+      <h2>What is your housing?</h2>
+      <div class="segmented">
+        <div class="choice"><input id="h-rent" type="radio" name="housing" value="renter"><label for="h-rent">I rent</label></div>
+        <div class="choice"><input id="h-own" type="radio" name="housing" value="owner"><label for="h-own">I own</label></div>
+        <div class="choice"><input id="h-none" type="radio" name="housing" value="unstable"><label for="h-none">No stable home</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="5b">Back</button><button class="btn" type="button" data-go="7">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="7">
+      <h2>Any urgent changes?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="s-urgent" type="checkbox" data-group="situation" value="urgent"><label for="s-urgent">Shutoff, eviction, or no food</label></div>
+        <div class="choice"><input id="s-job" type="checkbox" data-group="situation" value="jobloss"><label for="s-job">Job lost or hours cut</label></div>
+        <div class="choice"><input id="s-work" type="checkbox" data-group="situation" value="workschool"><label for="s-work">Work, school, or training</label></div>
+        <div class="choice"><input id="s-train" type="checkbox" data-group="situation" value="training"><label for="s-train">Want job training</label></div>
+        <div class="choice"><input id="s-diploma" type="checkbox" data-group="situation" value="nodiploma"><label for="s-diploma">Need a diploma</label></div>
+        <div class="choice"><input id="s-support" type="checkbox" data-group="situation" value="childsupport"><label for="s-support">Child-support help</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="6">Back</button><button class="btn" type="button" data-go="7b">Next</button></div>
+    </section>
+
+    <section class="panel" data-panel="7b">
+      <h2>Anything else happening?</h2>
+      <div class="choice-grid">
+        <div class="choice"><input id="s-care" type="checkbox" data-group="situation" value="dailycare"><label for="s-care">Daily care help</label></div>
+        <div class="choice"><input id="s-mortgage" type="checkbox" data-group="situation" value="mortgage"><label for="s-mortgage">Behind on mortgage</label></div>
+        <div class="choice"><input id="s-damage" type="checkbox" data-group="situation" value="repair"><label for="s-damage">Unsafe home repairs</label></div>
+        <div class="choice"><input id="s-legal" type="checkbox" data-group="situation" value="legal"><label for="s-legal">Legal problem</label></div>
+        <div class="choice"><input id="s-tax" type="checkbox" data-group="situation" value="tax"><label for="s-tax">Tax help</label></div>
+        <div class="choice"><input id="s-disaster" type="checkbox" data-group="situation" value="disaster"><label for="s-disaster">Disaster loss</label></div>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button" data-go="7">Back</button><button class="btn" type="button" id="showMatches">Show matches</button></div>
+    </section>
+
+    <section class="panel" data-panel="results" id="resultsPanel">
+      <div class="summary-band">
+        <div><h2 id="resultsTitle">Your matches</h2><div class="result-count" id="resultCount"></div></div>
+        <figure class="guide results-guide"><video class="results-video" id="resultsGuideVideo" src="videos/guide-celebrate.mp4" aria-label="Guide pointing to the matches and celebrating" muted playsinline preload="auto" poster="images/guide-celebrating.png"></video></figure>
+      </div>
+      <div class="keep-results" aria-label="Keep your results">
+        <button class="btn" type="button" id="downloadResults">Download</button>
+        <a class="btn" id="emailResults" href="mailto:" style="text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center">Email</a>
+        <button class="btn secondary" type="button" id="copyResults">Copy</button>
+      </div>
+      <p class="copy-status" id="copyStatus" aria-live="polite"></p>
+      <div class="results-layout">
+        <div class="program-list" id="programList"></div>
+      </div>
+      <div class="actions">
+        <button class="btn secondary" type="button" data-go="1">Change answers</button>
+        <button class="btn ghost" type="button" id="resetAll">Start over</button>
+      </div>
+    </section>
+  </main>
+  <div class="video-transition" id="videoTransition" aria-hidden="true"><video id="transitionVideo" muted playsinline preload="auto"></video><div class="drink-break-label hidden" id="drinkBreakLabel">Drink break</div></div>
+
+  <script>
+    (function () {
+      var programs = [
+        {id:'snap',title:'SNAP food assistance',cat:'Food',needs:['food'],benefit:'Monthly grocery benefits on a Hoosier Works card.',criteria:'Low-income Indiana households. Elderly or disabled households use different income rules.',caveat:'Unused benefits 274 days old begin expiring November 23, 2026.',url:'https://www.in.gov/fssa/dfr/snap-food-assistance/',phone:'800-403-0864',boost:function(s){return (s.low130||s.has('disabled')||s.has('age65'))?3:1;}},
+        {id:'wic',title:'Indiana WIC',cat:'Food',needs:['food','childcare'],benefit:'Food package, nutrition support, breastfeeding help, and referrals.',criteria:'Pregnant or postpartum people, infants, and children under 5; income up to 185% of poverty or automatic income eligibility through Medicaid, SNAP, or TANF.',url:'http://in.gov/health/wic/eligibility-requirements/',phone:'800-522-0874',when:function(s){return s.has('pregnant')||s.has('under5');},boost:function(s){return s.low185||s.qualBenefit?3:2;}},
+        {id:'school',title:'Free or reduced-price school meals',cat:'Food',needs:['food','childcare'],benefit:'Breakfast and lunch through a participating school.',criteria:'K–12 students; SNAP, TANF, and some Medicaid students may be directly certified.',url:'https://www.in.gov/doe/nutrition/free-and-reduced-information/free-and-reduced-forms/',phone:'Apply through the school',when:function(s){return s.has('schoolchild');},boost:function(s){return s.low185||s.qualBenefit?3:2;}},
+        {id:'tanf',title:'TANF cash assistance',cat:'Income',needs:['income','food','housing'],benefit:'Monthly cash plus employment supports for families with children.',criteria:'Very-low-income families with a child under 18; work-program and child-support cooperation rules apply.',url:'https://www.in.gov/fssa/dfr/tanf-cash-assistance/about-tanf/',phone:'800-403-0864',when:function(s){return s.has('under5')||s.has('schoolchild');},boost:function(s){return s.low50?3:1;}},
+        {id:'ssi',title:'SSI or SSDI disability benefits',cat:'Income',needs:['income','health'],benefit:'Monthly federal disability income; SSI can also connect to Medicaid.',criteria:'SSI is for people who are 65+, blind, or disabled with limited means. SSDI depends on disability and work history.',phone:'800-772-1213',when:function(s){return s.has('disabled')||s.has('age65');},boost:function(){return 2;}},
+        {id:'ui',title:'Indiana unemployment insurance',cat:'Income',needs:['income'],benefit:'Up to $390 a week for up to 26 weeks, if approved.',criteria:'Workers who lost a job through no fault of their own and meet wage and job-search rules.',url:'http://www.in.gov/dwd/indiana-unemployment/individuals/uplink-faq/',phone:'800-891-6499',when:function(s){return s.sit('jobloss');},boost:function(){return 3;}},
+        {id:'support',title:'Title IV-D child support services',cat:'Family',needs:['income','childcare'],benefit:'Free help with paternity, support orders, changes, collection, and enforcement.',criteria:'Parents and legal guardians at any income level.',url:'http://in.gov/ipac/child-support-services/',phone:'800-840-8757',when:function(s){return s.sit('childsupport');},boost:function(){return 3;}},
+        {id:'hip',title:'Healthy Indiana Plan (HIP)',cat:'Health',needs:['health','rx'],benefit:'Doctor, hospital, prescription, and mental-health coverage. HIP Plus adds dental and vision.',criteria:'Adults age 19–64 generally up to 138% of poverty.',caveat:'Work requirements begin January 1, 2027; some members must document 80 hours a month or $580 monthly earnings.',url:'https://www.in.gov/fssa/hip/',phone:'877-438-4479',when:function(s){return s.has('adult')&&!s.benefit('medicare');},boost:function(s){return s.low138?3:1;}},
+        {id:'hhw',title:'Hoosier Healthwise',cat:'Health',needs:['health','rx'],benefit:'Medical, dental, vision, prescriptions, hospital, and mental-health care for children and pregnant people.',criteria:'Children through age 19 and pregnant people; income rules vary by coverage package.',url:'https://www.in.gov/medicaid/members/member-programs/hoosier-healthwise/hoosier-healthwise-social-media-toolkit/',phone:'800-889-9949',when:function(s){return s.has('pregnant')||s.has('under5')||s.has('schoolchild');},boost:function(s){return s.low250?3:2;}},
+        {id:'msp',title:'Medicare Savings Programs',cat:'Health',needs:['health','rx'],benefit:'Can pay the Medicare Part B premium; QMB also covers deductibles and coinsurance.',criteria:'Medicare members with limited income and resources. SHIP can screen QMB, SLMB, and QI.',url:'https://www.in.gov/ship/2508.htm',phone:'800-452-4800',when:function(s){return s.benefit('medicare');},boost:function(s){return s.low150?3:2;}},
+        {id:'extrahelp',title:'Extra Help for Medicare prescriptions',cat:'Health',needs:['rx','health'],benefit:'Can reduce Part D premiums and deductibles to $0 and cap prescription copays.',criteria:'Medicare drug-plan members with limited income; automatic with Medicaid, SSI, or a Medicare Savings Program.',url:'http://www.in.gov/ship/',phone:'800-452-4800',when:function(s){return s.benefit('medicare');},boost:function(s){return s.low150||s.benefit('medicaid')||s.benefit('ssi')?3:2;}},
+        {id:'hoosierrx',title:'HoosierRx',cat:'Health',needs:['rx'],benefit:'Up to $70 a month toward a participating Medicare Part D premium.',criteria:'Indiana residents age 65+, under 150% of poverty, enrolled in a participating Part D plan, and not on Medicaid.',url:'https://hoosierrx.fssa.in.gov',phone:'866-267-4679',when:function(s){return s.has('age65')&&s.benefit('medicare')&&!s.benefit('medicaid');},boost:function(s){return s.low150?3:2;}},
+        {id:'nemt',title:'Medicaid medical rides',cat:'Transportation',needs:['transport','health'],benefit:'Rides to Medicaid-covered appointments when no other ride is available.',criteria:'Traditional Medicaid members call Verida; managed-care members call their health plan. Book at least two business days ahead.',url:'https://faqs.in.gov/hc/en-us/articles/360042519011-How-does-a-Medicaid-member-arrange-for-transportation',phone:'855-325-7586',when:function(s){return s.benefit('medicaid');},boost:function(){return 3;}},
+        {id:'ship',title:'SHIP Medicare counseling',cat:'Health',needs:['health','rx'],benefit:'Free, impartial help choosing Medicare coverage and applying for cost-saving programs.',criteria:'Anyone with Medicare, their family, or caregiver.',url:'http://www.in.gov/ship/',phone:'800-452-4800',when:function(s){return s.benefit('medicare')||s.has('caregiver');},boost:function(){return 2;}},
+        {id:'eap',title:'Energy Assistance Program (EAP / LIHEAP)',cat:'Utilities',needs:['energy'],benefit:'One annual payment sent to the heating or electric company; crisis help may be available.',criteria:'Owners and renters at or below 60% of Indiana state median income.',caveat:'Current window: October 1, 2026 through April 30, 2027.',url:'https://www.in.gov/ihcda/homeowners-and-renters/low-income-home-energy-assistance-program-liheap',phone:'Apply through county provider',boost:function(s){return s.low200||s.sit('urgent')?3:2;}},
+        {id:'wap',title:'Weatherization Assistance Program',cat:'Utilities',needs:['energy','repair'],benefit:'Free insulation, air sealing, duct work, and justified heating-system repairs.',criteria:'Low-income owners and renters; EAP recipients qualify. Waitlists are common.',url:'http://in.gov/ihcda/homeowners-and-renters/weatherizationenergy-conservation/',phone:'Apply through county provider',boost:function(s){return s.benefit('eap')||s.low200?3:2;}},
+        {id:'hardship',title:'Utility company hardship funds',cat:'Utilities',needs:['energy'],benefit:'Bill credits or grants through Duke, NIPSCO, AES Indiana, CenterPoint, Citizens Energy, and Indiana Michigan Power programs.',criteria:'Rules depend on the utility. Apply through a community action agency or ask 2-1-1 for the right provider.',caveat:'Funding and benefit amounts vary; ask before counting on a grant.',url:'https://www.in211.org/',phone:'211',boost:function(s){return s.sit('urgent')?3:1;}},
+        {id:'lifeline',title:'Lifeline phone or internet discount',cat:'Connectivity',needs:['connect'],benefit:'Up to $9.25 a month off phone, internet, or bundled service; $5.25 for voice-only.',criteria:'Income at or below 135% of poverty, or SNAP, Medicaid, SSI, public housing assistance, or qualifying veterans benefits. One benefit per household.',url:'https://www.fcc.gov/lifeline-consumers',phone:'800-234-9473',boost:function(s){return s.low135||s.qualBenefit?3:2;}},
+        {id:'hcv',title:'Housing Choice Voucher / public housing',cat:'Housing',needs:['housing'],benefit:'Helps very-low-income renters pay part of the rent.',criteria:'Applications are waitlist-driven by county; expect a wait.',caveat:'IHCDA does not operate every county or Marion County. Check the county list first.',url:'https://www.waitlistcheck.com/IN1806',phone:'Waitlist portal',when:function(s){return s.housing==='renter'||s.housing==='unstable';},boost:function(s){return s.low50?3:2;}},
+        {id:'trustee',title:'Township trustee assistance',cat:'Emergency',needs:['housing','energy','water','food','rx','funeral'],benefit:'Last-resort help with rent or mortgage, utilities, food, medicine, and burial costs, paid to vendors.',criteria:'Indiana residents in need; every township has a trustee. A decision is generally due within 72 hours.',url:'https://www.in211.org/',phone:'211 finds your trustee',boost:function(s){return s.sit('urgent')?3:2;}},
+        {id:'housingnow',title:'Emergency shelter and affordable housing search',cat:'Housing',needs:['housing'],benefit:'Local shelter referrals plus a statewide affordable-rental search.',criteria:'For people without stable housing or at risk of losing housing.',url:'https://housing4hoosiers.org/get-your-housing/find-it/',phone:'877-428-8844',when:function(s){return s.housing==='unstable'||s.sit('urgent');},boost:function(){return 3;}},
+        {id:'foreclosure',title:'Foreclosure prevention counseling',cat:'Housing',needs:['housing'],benefit:'Free HUD-certified mortgage counseling and help talking with the loan servicer.',criteria:'Homeowners behind on a mortgage or at risk of foreclosure.',url:'https://www.consumerfinance.gov/find-a-housing-counselor/',phone:'317-813-3240',when:function(s){return s.housing==='owner'&&s.sit('mortgage');},boost:function(){return 3;}},
+        {id:'usda504',title:'USDA Section 504 Home Repair',cat:'Housing',needs:['repair'],benefit:'Loans up to $40,000 at 1% for 20 years; grants up to $10,000 for qualifying homeowners age 62+.',criteria:'Owner-occupants in eligible rural areas with low or very-low income who cannot get affordable credit elsewhere. Grants require age 62+ and health/safety work.',caveat:'Address eligibility and local funding must be checked.',url:'https://rd.usda.gov/programs-services/single-family-housing-programs/single-family-housing-repair-loans-grants',phone:'Local USDA Rural Development office',when:function(s){return s.housing==='owner'&&(s.sit('repair')||s.need('repair'));},boost:function(s){return s.has('age65')?3:2;}},
+        {id:'propertytax',title:'Indiana homeowner property-tax relief',cat:'Housing',needs:['housing'],benefit:'Homestead deductions, an automatic 10% credit up to $300, and added credits for qualifying seniors, blind or disabled owners, and disabled veterans.',criteria:'Owner-occupied Indiana homes. County auditors handle applications and proof.',caveat:'100%-disabled veterans must refile State Form 12662 by December 30, 2026.',url:'https://www.in.gov/counties/howard/departments/auditors-office/',phone:'Your county auditor',when:function(s){return s.housing==='owner';},boost:function(s){return s.has('disabled')||s.has('age65')||s.has('veteran')?3:2;}},
+        {id:'ccdf',title:'CCDF child-care vouchers',cat:'Family',needs:['childcare'],benefit:'Pays part of approved child-care costs; family copay or provider overage may remain.',criteria:'Child under 13, or under 19 with documented special needs; parent working, in school, or training; entry income at or below 135% of poverty.',caveat:'Statewide waitlist. Reconfirm interest every 90 days.',url:'https://www.in.gov/fssa/carefinder/child-care-assistance/',phone:'800-299-1627',when:function(s){return (s.has('under5')||s.has('schoolchild'))&&s.sit('workschool');},boost:function(s){return s.low135?3:2;}},
+        {id:'prek',title:'On My Way Pre-K',cat:'Family',needs:['childcare'],benefit:'Up to $6,800 per child per year toward approved pre-K tuition.',criteria:'Indiana 4-year-olds with a working, studying, or training parent; income rules apply.',caveat:'Limited to 2,500 seats statewide for 2026–27; expect a waitlist.',url:'https://brighterfuturesindiana.org/earlyed/what-is-on-my-way-pre-k',phone:'800-299-1627',when:function(s){return s.has('age4')&&s.sit('workschool');},boost:function(s){return s.low185?3:2;}},
+        {id:'headstart',title:'Head Start / Early Head Start',cat:'Family',needs:['childcare','food'],benefit:'Free early learning and family support for young children and pregnant people.',criteria:'Children 0–5 and pregnant people with low income or qualifying status such as SNAP, TANF, SSI, foster care, or homelessness.',url:'https://www.in211.org/',phone:'211 finds the local program',when:function(s){return s.has('under5')||s.has('pregnant');},boost:function(s){return s.low100||s.qualBenefit||s.housing==='unstable'?3:2;}},
+        {id:'workone',title:'WorkOne and WIOA training',cat:'Work',needs:['income'],benefit:'Free job search, resume help, career counseling, and possible paid training or certification.',criteria:'Job seekers, underemployed workers, dislocated workers, and eligible youth.',url:'https://www.in.gov/dwd/workonewestcentral/job-seekers/',phone:'800-457-8283',when:function(s){return s.sit('jobloss')||s.sit('training');},boost:function(){return 3;}},
+        {id:'adulted',title:'Indiana Adult Education',cat:'Work',needs:['income'],benefit:'Free reading, math, English-language, high-school equivalency, and entry-level certification classes.',criteria:'Adults who need basic skills, a high-school equivalency diploma, or a career bridge.',url:'https://www.in.gov/dwd/owbla/about-us/categories/',phone:'Ask your local WorkOne',when:function(s){return s.sit('nodiploma');},boost:function(){return 3;}},
+        {id:'choice',title:'CHOICE and Area Agencies on Aging',cat:'Care',needs:['care','transport'],benefit:'In-home help, meals, transportation, home modifications, respite, and caregiver support.',criteria:'People age 60+ or disabled people of any age who risk losing independence. No income limit; sliding fees may apply.',url:'http://www.in.gov/fssa/da/programs-and-services2',phone:'800-986-3505',when:function(s){return s.has('age60')||s.has('age65')||s.has('disabled')||s.has('caregiver')||s.sit('dailycare');},boost:function(s){return s.sit('dailycare')?3:2;}},
+        {id:'pathways',title:'Indiana PathWays for Aging',cat:'Care',needs:['care','health','transport'],benefit:'Medicaid long-term services such as personal care, meals, respite, transportation, and self-directed care.',criteria:'Medicaid members age 60+; waiver services require a nursing-home level of care.',caveat:'Home- and community-based waiver services have a waitlist.',url:'http://in.gov/fssa/ddars/resources/individuals/hcbs-waiver-waiting-list-information/',phone:'877-284-9294',when:function(s){return (s.has('age60')||s.has('age65'))&&s.benefit('medicaid');},boost:function(s){return s.sit('dailycare')?3:2;}},
+        {id:'cvso',title:'County Veteran Service Officer',cat:'Veterans',needs:['income','health','housing','funeral'],benefit:'Free help with VA disability, pension, health care, burial, survivor, and Indiana veteran benefits.',criteria:'Veterans, active-duty families, and survivors.',url:'https://www.in.gov/dva/locate-your-cvso/',phone:'Find your county officer',when:function(s){return s.has('veteran');},boost:function(){return 3;}},
+        {id:'mfrf',title:'Military Family Relief Fund',cat:'Veterans',needs:['income','housing','energy','food','health','transport','childcare'],benefit:'Emergency grant up to $2,500 lifetime for eligible food, housing, utility, medical, transportation, or child-care costs.',criteria:'Indiana veterans, active duty, Guard, or Reserve families with qualifying service and documented hardship.',url:'http://in.gov/dva/files/2019-IDVA-MFRF-APPLICATION-rev-10-8-20.pdf',phone:'Apply through CVSO',when:function(s){return s.has('veteran');},boost:function(s){return s.sit('urgent')?3:2;}},
+        {id:'legal',title:'Indiana Legal Services',cat:'Legal',needs:['legal','housing'],benefit:'Free civil legal help for benefits, housing, consumer, family, safety, and health-care access matters.',criteria:'Low-income Indiana residents; no criminal cases.',url:'http://indianalegalhelp.org/organization/indiana-legal-services-evansville/',phone:'844-243-8570',when:function(s){return s.need('legal')||s.sit('legal');},boost:function(){return 3;}},
+        {id:'tax',title:'Free tax preparation and tax clinics',cat:'Legal',needs:['legal','income'],benefit:'Seasonal VITA or AARP tax filing; low-income taxpayer clinics help with IRS disputes.',criteria:'VITA generally serves lower-income filers, people with disabilities, and limited-English households; site limits vary.',caveat:'Tax preparation sites are usually open January through April.',url:'http://secure.in.gov/dor/i-am-a/individual/seniors/',phone:'211 for a nearby site',when:function(s){return s.sit('tax');},boost:function(){return 3;}},
+        {id:'burial',title:'DFR Burial Assistance',cat:'Emergency',needs:['funeral'],benefit:'Help with burial costs; the state does not publish one standard amount.',criteria:'Only specific Medicaid eligibility categories qualify. Township trustees and veteran burial benefits may also help.',url:'https://www.in.gov/fssa/dfr/about-dfr/about-the-burial-assistance-program/',phone:'800-403-0864',boost:function(s){return s.benefit('medicaid')?3:2;}},
+        {id:'disaster',title:'Indiana disaster relief',cat:'Emergency',needs:['disaster'],benefit:'State grants up to $5,000 may cover urgent food, clothing, housing, repairs, utilities, or transportation after qualifying events.',criteria:'Availability depends on the declared disaster and county. Report damage and ask 2-1-1 about current state or FEMA assistance.',url:'https://www.in211.org/',phone:'211; text IN211HELP to 898-211',when:function(s){return s.need('disaster')||s.sit('disaster');},boost:function(){return 3;}},
+        {id:'water',title:'Water, sewer, and trash help routes',cat:'Utilities',needs:['water'],benefit:'Township trustee aid, 2-1-1 referrals, charitable grants, and utility payment plans.',criteria:'No statewide Indiana water, sewer, or trash subsidy was found.',caveat:'The federal LIHWAP water program ended; avoid sites claiming current LIHWAP grants.',url:'https://acf.gov/ocs/programs/lihwap',phone:'211',boost:function(s){return s.sit('urgent')?3:2;}},
+        {id:'211',title:'Indiana 211',cat:'Emergency',needs:['food','housing','energy','water','health','rx','childcare','transport','income','repair','care','legal','funeral','disaster'],benefit:'Local referrals for food, shelter, utilities, health care, mental health, legal aid, clothing, family support, veterans, and disaster help.',criteria:'Free and confidential for all 92 Indiana counties.',url:'https://www.in211.org/',phone:'Dial 211 or 866-211-9966',boost:function(s){return s.sit('urgent')?3:1;}}
+      ];
+
+      var questionOrder = ['1','1a','1b','1c','2','3','4','4b','5','5b','6','7','7b'];
+      questionOrder.forEach(function(panelName){
+        var panel = document.querySelector('.panel[data-panel="'+panelName+'"]');
+        var heading = panel && panel.querySelector('h2');
+        if (!panel || !heading) return;
+        panel.classList.add('question-panel');
+        var interview = document.createElement('div');
+        interview.className = 'interview-top';
+        var guideWrap = document.createElement('div');
+        guideWrap.className = 'interview-guide-wrap';
+        var guideVideo = document.createElement('video');
+        guideVideo.className = 'interview-guide';
+        guideVideo.src = 'videos/guide-writing.mp4';
+        guideVideo.poster = 'images/guide-interview.png';
+        guideVideo.muted = true;
+        guideVideo.playsInline = true;
+        guideVideo.preload = 'auto';
+        guideVideo.setAttribute('aria-label', 'Guide holding a clipboard');
+        guideWrap.appendChild(guideVideo);
+        var bubble = document.createElement('div');
+        bubble.className = 'speech-bubble';
+        bubble.appendChild(heading);
+        interview.appendChild(guideWrap);
+        interview.appendChild(bubble);
+        panel.insertBefore(interview, panel.firstChild);
+      });
+
+      var current = 'welcome';
+      var browse = false;
+      var activeFilter = 'All';
+      var lastVisiblePrograms = [];
+      var panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+      var progressWrap = document.getElementById('progressWrap');
+      var progressBar = document.getElementById('progressBar');
+      var progressLabel = document.getElementById('progressLabel');
+      var welcomeGuide = document.getElementById('welcomeGuide');
+      var welcomeGuideVideo = document.getElementById('welcomeGuideVideo');
+      var videoTransition = document.getElementById('videoTransition');
+      var transitionVideo = document.getElementById('transitionVideo');
+      var drinkBreakLabel = document.getElementById('drinkBreakLabel');
+      var resultsGuideVideo = document.getElementById('resultsGuideVideo');
+      var soundToggle = document.getElementById('soundToggle');
+      var moving = false;
+      var currentEntrance = 'roof';
+      var soundEnabled = true;
+      var audioContext = null;
+      var sfxTimers = [];
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function clearSfxTimers() {
+        sfxTimers.forEach(function(timer){ clearTimeout(timer); });
+        sfxTimers = [];
+      }
+      function unlockAudio() {
+        if (!soundEnabled) return;
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') audioContext.resume();
+      }
+      function tone(frequency, duration, type, volume) {
+        if (!soundEnabled || !audioContext) return;
+        var oscillator = audioContext.createOscillator();
+        var gain = audioContext.createGain();
+        oscillator.type = type || 'sine';
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        gain.gain.setValueAtTime(volume || .055, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + duration);
+        oscillator.connect(gain).connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration);
+      }
+      function noise(duration, volume) {
+        if (!soundEnabled || !audioContext) return;
+        var length = Math.floor(audioContext.sampleRate * duration);
+        var buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+        var source = audioContext.createBufferSource();
+        var gain = audioContext.createGain();
+        source.buffer = buffer;
+        gain.gain.value = volume || .05;
+        source.connect(gain).connect(audioContext.destination);
+        source.start();
+      }
+      function later(ms, fn) { sfxTimers.push(setTimeout(fn, ms)); }
+      function playSfx(kind) {
+        clearSfxTimers();
+        unlockAudio();
+        if (!soundEnabled || !audioContext) return;
+        if (kind === 'crash') {
+          later(400, function(){ noise(.35, .035); });
+          later(1250, function(){ tone(150, .7, 'sawtooth', .035); });
+          later(2450, function(){ noise(.8, .11); tone(72, .65, 'sine', .11); });
+          later(5100, function(){ noise(.18, .025); });
+        } else if (kind === 'floor') {
+          later(350, function(){ noise(.6, .075); });
+          later(1450, function(){ tone(180, .75, 'sawtooth', .03); });
+          later(3600, function(){ tone(110, 1.4, 'sine', .06); });
+        } else if (kind === 'writing') {
+          for (var i = 0; i < 13; i++) later(1000 + i * 520, function(){ noise(.12, .018); });
+        } else if (kind === 'drink') {
+          later(650, function(){ tone(520, .16, 'triangle', .04); });
+          later(2600, function(){ tone(128, 1.4, 'sine', .025); });
+          later(4300, function(){ tone(142, 1.2, 'sine', .025); });
+          later(7900, function(){ tone(660, .16, 'triangle', .04); tone(880, .2, 'triangle', .03); });
+        } else if (kind === 'wake') {
+          later(400, function(){ tone(125, 1.4, 'sine', .025); });
+          later(6400, function(){ tone(520, .14, 'triangle', .035); tone(720, .22, 'triangle', .025); });
+        } else if (kind === 'celebrate') {
+          [0, 160, 320, 520].forEach(function(ms, index){ later(1400 + ms, function(){ tone([392, 523, 659, 784][index], .28, 'triangle', .045); }); });
+          later(4300, function(){ noise(.28, .035); });
+        }
+      }
+      function playClip(video, src, kind, done) {
+        if (reduceMotion) { if (done) setTimeout(done, 80); return; }
+        clearSfxTimers();
+        if (video.getAttribute('src') !== src) video.setAttribute('src', src);
+        video.muted = true;
+        video.currentTime = 0;
+        playSfx(kind);
+        var finished = false;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          video.removeEventListener('ended', finish);
+          if (done) done();
+        }
+        video.addEventListener('ended', finish);
+        var promise = video.play();
+        if (promise && promise.catch) promise.catch(function(){ setTimeout(finish, 1200); });
+      }
+      function startGuideEntrance() {
+        welcomeGuide.className = 'guide welcome-guide arriving';
+        playClip(welcomeGuideVideo, 'videos/guide-crash.mp4', 'crash', function(){
+          playClip(welcomeGuideVideo, 'videos/guide-wake-up.mp4', 'wake');
+        });
+      }
+      function activeInterviewVideo() {
+        return document.querySelector('.panel.active .interview-guide');
+      }
+      function resetInterviewVideo() {
+        var video = activeInterviewVideo();
+        if (!video) return;
+        video.pause();
+        video.className = 'interview-guide';
+        video.load();
+      }
+      function playSpecialDrink(done) {
+        videoTransition.className = 'video-transition active';
+        videoTransition.setAttribute('aria-hidden', 'false');
+        drinkBreakLabel.classList.remove('hidden');
+        playClip(transitionVideo, 'videos/guide-drink-break.mp4', 'drink', function(){
+          drinkBreakLabel.classList.add('hidden');
+          videoTransition.className = 'video-transition';
+          videoTransition.setAttribute('aria-hidden', 'true');
+          if (done) done();
+        });
+      }
+      function jotAnswer(moveNext) {
+        if (moving || !moveNext) return;
+        moving = true;
+        document.body.classList.add('recording');
+        var video = activeInterviewVideo();
+        if (!video || reduceMotion) {
+          document.body.classList.remove('recording');
+          moving = false;
+          moveNext();
+          return;
+        }
+        video.className = 'interview-guide writing';
+        playClip(video, 'videos/guide-writing.mp4', 'writing', function(){
+          resetInterviewVideo();
+          document.body.classList.remove('recording');
+          moving = false;
+          if (current === '5b') playSpecialDrink(moveNext);
+          else moveNext();
+        });
+      }
+      function showPanel(panel) {
+        current = String(panel);
+        panels.forEach(function(p){ p.classList.toggle('active', p.getAttribute('data-panel') === current); });
+        var questionIndex = questionOrder.indexOf(current);
+        var inQuestions = questionIndex > -1;
+        progressWrap.classList.toggle('on', inQuestions);
+        document.body.classList.toggle('answering', inQuestions);
+        if (inQuestions) {
+          progressBar.style.width = (((questionIndex + 1) / questionOrder.length) * 100) + '%';
+          progressLabel.textContent = (questionIndex + 1) + ' of ' + questionOrder.length;
+        }
+        window.scrollTo({top:0,behavior:reduceMotion ? 'auto' : 'smooth'});
+      }
+      function playResultsVideo() {
+        playClip(resultsGuideVideo, 'videos/guide-celebrate.mp4', 'celebrate');
+      }
+      function go(panel) {
+        panel = String(panel);
+        if (moving || panel === current) return;
+        if (reduceMotion) {
+          showPanel(panel);
+          if (panel === 'results') playResultsVideo();
+          if (panel === 'welcome') startGuideEntrance();
+          return;
+        }
+        moving = true;
+        document.body.classList.add('transitioning');
+        var entrance = currentEntrance;
+        currentEntrance = currentEntrance === 'roof' ? 'floor' : 'roof';
+        showPanel(panel);
+        videoTransition.className = 'video-transition active' + (entrance === 'floor' ? ' floor-follow' : '');
+        videoTransition.setAttribute('aria-hidden', 'false');
+        var src = entrance === 'floor' ? 'videos/guide-floor-drop.mp4' : 'videos/guide-crash.mp4';
+        playClip(transitionVideo, src, entrance === 'floor' ? 'floor' : 'crash', function(){
+          videoTransition.className = 'video-transition';
+          videoTransition.setAttribute('aria-hidden', 'true');
+          document.body.classList.remove('transitioning');
+          moving = false;
+          resetInterviewVideo();
+          if (panel === 'results') playResultsVideo();
+          if (panel === 'welcome') startGuideEntrance();
+        });
+      }
+
+      function setFrom(group) {
+        var out = [];
+        document.querySelectorAll('[data-group="'+group+'"]:checked').forEach(function(el){out.push(el.value);});
+        return out;
+      }
+
+      function buildState() {
+        var household = Math.max(1, parseInt(document.getElementById('household').value,10) || 1);
+        var rawIncome = document.getElementById('income').value;
+        var incomeKnown = rawIncome !== '';
+        var income = incomeKnown ? Math.max(0, Number(rawIncome)) : null;
+        var fpl = 15960 + Math.max(0, household - 1) * 5680;
+        var profile = setFrom('profile');
+        var benefits = setFrom('benefits');
+        var needs = setFrom('needs');
+        var situations = setFrom('situation');
+        var housing = (document.querySelector('input[name="housing"]:checked')||{}).value || '';
+        return {
+          household: household, income: income, incomeKnown: incomeKnown, fpl: fpl,
+          profile: profile, benefits: benefits, needs: needs, situations: situations, housing: housing,
+          low50: incomeKnown && income <= fpl*.5, low100: incomeKnown && income <= fpl,
+          low130: incomeKnown && income <= fpl*1.3, low135: incomeKnown && income <= fpl*1.35,
+          low138: incomeKnown && income <= fpl*1.38, low150: incomeKnown && income <= fpl*1.5,
+          low185: incomeKnown && income <= fpl*1.85, low200: incomeKnown && income <= fpl*2,
+          low250: incomeKnown && income <= fpl*2.5,
+          has:function(v){return profile.indexOf(v)>-1;}, benefit:function(v){return benefits.indexOf(v)>-1;},
+          need:function(v){return needs.indexOf(v)>-1;}, sit:function(v){return situations.indexOf(v)>-1;},
+          qualBenefit: benefits.some(function(v){return ['snap','medicaid','ssi','tanf','publichousing'].indexOf(v)>-1;})
+        };
+      }
+
+      function scoreProgram(p,s) {
+        if (browse) return 1;
+        if (p.when && !p.when(s)) return 0;
+        var base = p.needs.some(function(n){return s.need(n);}) ? 1 : 0;
+        if (!base && p.when && p.when(s)) base = 1;
+        if (!base) return 0;
+        return p.boost ? Math.max(base,p.boost(s)) : base;
+      }
+
+      function warnings(s) {
+        var out = [];
+        if (s.need('connect')) out.push('<div class="ended"><strong>Internet warning:</strong> The federal ACP ended June 1, 2024. Lifeline is still active.</div>');
+        if (s.need('water')) out.push('<div class="ended"><strong>Water warning:</strong> Federal LIHWAP ended. Use the trustee, 2-1-1, charitable funds, or a payment plan.</div>');
+        if (s.need('food') && s.has('schoolchild')) out.push('<div class="ended"><strong>Summer warning:</strong> Indiana is not offering SUN Bucks in 2026.</div>');
+        if (s.need('housing') && s.housing==='renter') out.push('<div class="ended"><strong>Rent warning:</strong> Indiana Emergency Rental Assistance closed April 15, 2025. The list below shows open routes.</div>');
+        return out.join('');
+      }
+
+      function renderResults(all) {
+        browse = !!all;
+        var s = buildState();
+        var scored = programs.map(function(p){return {p:p,score:scoreProgram(p,s)};}).filter(function(x){return x.score>0;});
+        scored.sort(function(a,b){return b.score-a.score || a.p.cat.localeCompare(b.p.cat) || a.p.title.localeCompare(b.p.title);});
+        var visible = scored;
+        lastVisiblePrograms = visible.map(function(x){ return x.p; });
+        document.getElementById('resultsTitle').textContent = browse ? 'All programs' : 'Your matches';
+        document.getElementById('resultCount').textContent = scored.length + (scored.length===1?' program':' programs');
+        var html = visible.map(function(x){
+          var p=x.p;
+          var link = p.url ? '<a href="'+p.url+'" target="_blank" rel="noopener">Apply or learn more</a>' : '';
+          var phoneDigits = (p.phone || '').replace(/[^0-9]/g,'');
+          var phone = p.phone ? (/^[0-9() -]+$/.test(p.phone) && phoneDigits.length >= 7 ? '<a class="phone" href="tel:'+phoneDigits+'">'+p.phone+'</a>' : '<div class="phone">'+p.phone+'</div>') : '';
+          return '<article class="program">'+
+            '<h3>'+p.title+'</h3><p class="benefit">'+p.benefit+'</p>'+
+            '<div class="program-links">'+link+phone+'</div></article>';
+        }).join('');
+        document.getElementById('programList').innerHTML = html || '<div class="empty">No matches yet. Change your answers.</div>';
+        var subject = browse ? 'Indiana benefit programs' : 'My Indiana benefit matches';
+        document.getElementById('emailResults').href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(resultsText());
+        go('results');
+      }
+
+      function resultsText() {
+        var title = browse ? 'Indiana benefit programs' : 'My Indiana benefit matches';
+        if (!lastVisiblePrograms.length) return title + '\n\nNo matches yet.';
+        return title + '\n\n' + lastVisiblePrograms.map(function(p){
+          var parts = [p.title, p.benefit];
+          if (p.url) parts.push(p.url);
+          if (p.phone) parts.push(p.phone);
+          return parts.join('\n');
+        }).join('\n\n');
+      }
+      function downloadResults() {
+        var blob = new Blob([resultsText()], {type:'text/plain;charset=utf-8'});
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = browse ? 'indiana-benefit-programs.txt' : 'my-indiana-benefit-matches.txt';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      }
+      function showCopyStatus(text) {
+        var status = document.getElementById('copyStatus');
+        status.textContent = text;
+        setTimeout(function(){ if (status.textContent === text) status.textContent = ''; }, 2600);
+      }
+      function copyResults() {
+        var text = resultsText();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function(){ showCopyStatus('Copied'); }, function(){ fallbackCopy(text); });
+        } else fallbackCopy(text);
+      }
+      function fallbackCopy(text) {
+        var area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly','');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand('copy'); showCopyStatus('Copied'); }
+        catch (err) { showCopyStatus('Copy failed'); }
+        area.remove();
+      }
+
+      document.addEventListener('click', function(e){
+        unlockAudio();
+        var goBtn = e.target.closest('[data-go]');
+        if (goBtn) {
+          var target = String(goBtn.getAttribute('data-go'));
+          var fromIndex = questionOrder.indexOf(current);
+          var toIndex = questionOrder.indexOf(target);
+          if (fromIndex > -1 && toIndex > fromIndex) {
+            jotAnswer(function(){ go(target); });
+          } else {
+            go(target);
+          }
+          return;
+        }
+        var filter = e.target.closest('[data-filter]');
+        if (filter) { activeFilter=filter.getAttribute('data-filter'); renderResults(browse); return; }
+      });
+      document.querySelectorAll('.question-panel input').forEach(function(input){
+        input.addEventListener('change', function(){
+          if (moving) return;
+          var video = activeInterviewVideo();
+          if (!video || reduceMotion) return;
+          video.className = 'interview-guide writing';
+          playClip(video, 'videos/guide-writing.mp4', 'writing');
+        });
+      });
+      soundToggle.addEventListener('click', function(){
+        soundEnabled = !soundEnabled;
+        soundToggle.setAttribute('aria-pressed', String(soundEnabled));
+        soundToggle.textContent = soundEnabled ? 'Sound on' : 'Sound off';
+        if (!soundEnabled) {
+          clearSfxTimers();
+          if (audioContext && audioContext.state === 'running') audioContext.suspend();
+        } else {
+          unlockAudio();
+          tone(660, .16, 'triangle', .04);
+        }
+      });
+      document.getElementById('browseAll').addEventListener('click',function(){activeFilter='All';renderResults(true);});
+      document.getElementById('downloadResults').addEventListener('click',downloadResults);
+      document.getElementById('copyResults').addEventListener('click',copyResults);
+      document.getElementById('showMatches').addEventListener('click',function(){
+        jotAnswer(function(){ activeFilter='All'; renderResults(false); });
+      });
+      document.getElementById('resetAll').addEventListener('click',function(){
+        document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(el){el.checked=false;});
+        document.getElementById('household').value='1';
+        document.getElementById('income').value='';
+        activeFilter='All'; browse=false; go('welcome');
+      });
+      document.getElementById('b-none').addEventListener('change',function(){
+        if (this.checked) document.querySelectorAll('[data-group="benefits"]:not(#b-none)').forEach(function(el){el.checked=false;});
+      });
+      document.querySelectorAll('[data-group="benefits"]:not(#b-none)').forEach(function(el){el.addEventListener('change',function(){if(this.checked)document.getElementById('b-none').checked=false;});});
+      startGuideEntrance();
+    })();
+  </script>
+</body>
+</html>
