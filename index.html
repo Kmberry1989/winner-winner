@@ -192,7 +192,7 @@
       background: #fff;
     }
     .video-transition.active { display: flex; }
-    .video-transition video { width: min(100vw, 620px); height: 100vh; object-fit: contain; background: #fff; }
+    .video-transition video { width: min(100vw, 680px); height: 100dvh; object-fit: contain; background: #fff; cursor: pointer; }
     .video-transition.floor-follow { animation: cameraFollowDown 10s linear both; }
     @keyframes cameraFollowDown { 0%, 70% { transform: translateY(0); } 100% { transform: translateY(-100vh); } }
     .drink-break-label { position: fixed; z-index: 41; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); color: #102a33; font-family: "Comic Sans MS", "Bradley Hand", cursive; font-size: 2rem; font-weight: 700; pointer-events: none; white-space: nowrap; }
@@ -561,7 +561,7 @@
       </div>
     </section>
   </main>
-  <div class="video-transition" id="videoTransition" aria-hidden="true"><video id="transitionVideo" autoplay muted playsinline webkit-playsinline preload="auto" disablepictureinpicture></video><div class="drink-break-label hidden" id="drinkBreakLabel">Drink break</div></div>
+  <div class="video-transition" id="videoTransition" aria-hidden="true"><video id="transitionVideo" aria-label="Video interlude. Tap to continue." tabindex="0" autoplay muted playsinline webkit-playsinline preload="auto" disablepictureinpicture></video><div class="drink-break-label hidden" id="drinkBreakLabel">Drink break</div></div>
 
   <script>
     (function () {
@@ -678,6 +678,15 @@
       var moving = false;
       var currentEntrance = 'roof';
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var questionInterludes = [
+        VIDEO_SOURCES.celebrate,
+        VIDEO_SOURCES.crash,
+        VIDEO_SOURCES.drinkBreak,
+        VIDEO_SOURCES.floorDrop,
+        VIDEO_SOURCES.wakeUp,
+        VIDEO_SOURCES.writing
+      ];
+      var questionInterludeIndex = 0;
 
       function prepareVideo(video, shouldLoop) {
         video.autoplay = true;
@@ -784,29 +793,59 @@
       function go(panel) {
         panel = String(panel);
         if (moving || panel === current) return;
-        if (reduceMotion) {
-          showPanel(panel);
-          if (panel === 'results') playResultsVideo();
-          if (panel === 'welcome') startGuideEntrance();
-          return;
-        }
+        showPanel(panel);
+        resetInterviewVideo();
+        if (panel === 'results') playResultsVideo();
+        if (panel === 'welcome') startGuideEntrance();
+      }
+
+      function playQuestionInterlude(done) {
+        if (moving || !done) return;
+        if (reduceMotion) { done(); return; }
         moving = true;
         document.body.classList.add('transitioning');
-        var entrance = currentEntrance;
-        currentEntrance = currentEntrance === 'roof' ? 'floor' : 'roof';
-        showPanel(panel);
-        videoTransition.className = 'video-transition active' + (entrance === 'floor' ? ' floor-follow' : '');
+        drinkBreakLabel.classList.add('hidden');
+        videoTransition.className = 'video-transition active';
         videoTransition.setAttribute('aria-hidden', 'false');
-        var src = entrance === 'floor' ? VIDEO_SOURCES.floorDrop : VIDEO_SOURCES.crash;
-        playClip(transitionVideo, src, function(){
+
+        var src = questionInterludes[questionInterludeIndex % questionInterludes.length];
+        questionInterludeIndex += 1;
+        prepareVideo(transitionVideo, false);
+        if (transitionVideo.getAttribute('src') !== src) {
+          transitionVideo.setAttribute('src', src);
+          transitionVideo.load();
+        }
+        try { transitionVideo.currentTime = 0; } catch (err) {}
+
+        var finished = false;
+        var fallbackTimer = null;
+        function finishInterlude() {
+          if (finished) return;
+          finished = true;
+          if (fallbackTimer) clearTimeout(fallbackTimer);
+          transitionVideo.removeEventListener('ended', finishInterlude);
+          transitionVideo.removeEventListener('click', finishInterlude);
+          transitionVideo.removeEventListener('keydown', handleInterludeKey);
+          transitionVideo.pause();
           videoTransition.className = 'video-transition';
           videoTransition.setAttribute('aria-hidden', 'true');
           document.body.classList.remove('transitioning');
           moving = false;
-          resetInterviewVideo();
-          if (panel === 'results') playResultsVideo();
-          if (panel === 'welcome') startGuideEntrance();
-        });
+          done();
+        }
+        function handleInterludeKey(event) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            finishInterlude();
+          }
+        }
+        transitionVideo.addEventListener('ended', finishInterlude);
+        transitionVideo.addEventListener('click', finishInterlude);
+        transitionVideo.addEventListener('keydown', handleInterludeKey);
+        var promise = transitionVideo.play();
+        if (promise && promise.catch) {
+          promise.catch(function(){ fallbackTimer = setTimeout(finishInterlude, 1200); });
+        }
       }
 
       function setFrom(group) {
@@ -934,7 +973,7 @@
           var fromIndex = questionOrder.indexOf(current);
           var toIndex = questionOrder.indexOf(target);
           if (fromIndex > -1 && toIndex > fromIndex) {
-            jotAnswer(function(){ go(target); });
+            playQuestionInterlude(function(){ go(target); });
           } else {
             go(target);
           }
@@ -965,7 +1004,7 @@
       document.getElementById('downloadResults').addEventListener('click',downloadResults);
       document.getElementById('copyResults').addEventListener('click',copyResults);
       document.getElementById('showMatches').addEventListener('click',function(){
-        jotAnswer(function(){ activeFilter='All'; renderResults(false); });
+        playQuestionInterlude(function(){ activeFilter='All'; renderResults(false); });
       });
       document.getElementById('resetAll').addEventListener('click',function(){
         document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(el){el.checked=false;});
